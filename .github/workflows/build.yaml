@@ -63,3 +63,10 @@ jobs:
       with:
         name: CalculatorApp-AAB
         path: bin/*.aab
+
+    - name: Upload Buildozer Log
+      if: always()   # ensures log is uploaded even if build fails
+      uses: actions/upload-artifact@v4
+      with:
+        name: Buildozer-Log
+        path: .buildozer/android/platform/build.log
