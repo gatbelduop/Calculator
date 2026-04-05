@@ -1,4 +1,4 @@
-name: Build Kivy APK
+name: Build Kivy APK and AAB
 
 on:
   push:
@@ -44,12 +44,22 @@ jobs:
           ~/.gradle
         key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
 
-    - name: Build APK
+    - name: Build Debug APK
       run: |
         buildozer android debug
 
-    - name: Upload APK artifact
+    - name: Upload Debug APK
       uses: actions/upload-artifact@v4
       with:
         name: CalculatorApp-APK
         path: bin/*.apk
+
+    - name: Build Release AAB
+      run: |
+        buildozer android release
+
+    - name: Upload Release AAB
+      uses: actions/upload-artifact@v4
+      with:
+        name: CalculatorApp-AAB
+        path: bin/*.aab
