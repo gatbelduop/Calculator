@@ -1,72 +1,47 @@
-name: Build Kivy APK and AAB
+name: Build Kivy APK
 
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-  workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: ubuntu-22.04
+  build-apk:
+    runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.10"
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
 
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          libssl-dev libffi-dev zlib1g-dev \
-          openjdk-17-jdk unzip git \
-          pkg-config libgl1-mesa-dev libgles2-mesa-dev \
-          libsqlite3-dev
+      - name: Cache Buildozer/Android SDK & NDK
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.buildozer
+          key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
+          restore-keys: |
+            ${{ runner.os }}-buildozer-
 
-    - name: Install pip dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install buildozer==1.5.0
-        pip install cython==0.29.36
-        pip install python-for-android==2024.1.21
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            git zip unzip openjdk-11-jdk python3-pip \
+            libssl-dev libffi-dev build-essential
 
-    - name: Cache buildozer and gradle
-      uses: actions/cache@v3
-      with:
-        path: |
-          .buildozer
-          ~/.gradle
-        key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
+      - name: Install Buildozer
+        run: pip install buildozer cython
 
-    - name: Build Debug APK
-      run: |
-        buildozer android debug
+      - name: Pin NDK r25b in buildozer.spec
+        run: |
+          sed -i 's/^android.ndk.*/android.ndk = 25b/' buildozer.spec
+          sed -i 's|^android.ndk_path.*|android.ndk_path = /home/runner/.buildozer/android/platform/android-ndk-r25b|' buildozer.spec
 
-    - name: Upload Debug APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: CalculatorApp-APK
-        path: bin/*.apk
-
-    - name: Build Release AAB
-      run: |
-        buildozer android release
-
-    - name: Upload Release AAB
-      uses: actions/upload-artifact@v4
-      with:
-        name: CalculatorApp-AAB
-        path: bin/*.aab
-
-    - name: Upload Buildozer Log
-      if: always()   # ensures log is uploaded even if build fails
-      uses: actions/upload-artifact@v4
-      with:
-        name: Buildozer-Log
-        path: .buildozer/android/platform/build.log
+      - name: Build APK
+        run: buildozer android debug
